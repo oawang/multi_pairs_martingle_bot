@@ -373,7 +373,7 @@ class BinanceSpotTrader(object):
                 if len(config.allowed_lists) > 0 and s in config.allowed_lists:
                     index += 1
                     # the last one hour's the symbol jump over some percent.
-                    # 一小时暴涨百分之多少，以及四小时暴涨百分比
+                    # 暴涨百分之多少，以及四小时暴涨百分比
                     self.place_order(s, signal['pct'], signal['pct_4h'])
 
                 if s not in config.blocked_lists and len(config.allowed_lists) == 0:

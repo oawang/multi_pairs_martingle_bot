@@ -6,6 +6,8 @@
 
 import time
 import logging
+from decimal import Decimal
+
 from trader.binance_spot_trader import BinanceSpotTrader
 from trader.binance_future_trader import BinanceFutureTrader
 from utils import config
@@ -44,8 +46,8 @@ def get_data(trader: Union[BinanceFutureTrader, BinanceSpotTrader]):
             if symbol.upper() in config.blocked_lists:
                 continue
 
-        # klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.HOUR_1, limit=100)
-        klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.MINUTE_15, limit=50)
+        klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.HOUR_1, limit=24)
+        # klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.MINUTE_15, limit=24)
         if len(klines) > 0:
             df = pd.DataFrame(klines, dtype=np.float64,
                               columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'turnover', 'a2',
@@ -54,25 +56,30 @@ def get_data(trader: Union[BinanceFutureTrader, BinanceSpotTrader]):
             df.set_index('open_time', inplace=True)
             df.index = pd.to_datetime(df.index, unit='ms') + pd.Timedelta(hours=8)
 
-            # df_4hour = df.resample(rule='4H').agg({'open': 'first',
-            #                             'high': 'max',
-            #                             'low': 'min',
-            #                             'close': 'last',
-            #                             'volume': 'sum',
-            #                             'turnover': 'sum'
-            #                             })
+            df_4hour = df.resample(rule='4H').agg({'open': 'first',
+                                        'high': 'max',
+                                        'low': 'min',
+                                        'close': 'last',
+                                        'volume': 'sum',
+                                        'turnover': 'sum'
+                                        })
 
             # print(df)
 
             # calculate the pair's price change is one hour. you can modify the code below.
+            # pct = (df['close'].apply(Decimal) / df['open'].apply(Decimal)) - Decimal('1')
             pct = df['close'] / df['open'] - 1
-            # pct_4h = df_4hour['close']/df_4hour['open'] - 1
+            pct_4h = df_4hour['close']/df_4hour['open'] - 1
 
-            # value = {'pct': pct[-1], 'pct_4h':pct_4h[-1] , 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
+            value = {'pct': pct[-1], 'pct_4h':pct_4h[-1] , 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
+            #
+            # value = {'pct': pct[-1], 'pct_4h': 0, 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
 
-            value = {'pct': pct[-1], 'pct_4h': 0, 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
-
+            # 不管涨跌都买
             if value['pct'] < 0 and -value['pct'] >= config.pump_pct:
+            # the signal 1 mean buy signal.
+                value['signal'] = BUY_SIGNAL
+            elif value['pct'] >= config.pump_pct:
             # the signal 1 mean buy signal.
                 value['signal'] = BUY_SIGNAL
 
@@ -111,7 +118,11 @@ if __name__ == '__main__':
     get_data(trader)  # for testing
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(get_data, trigger='cron', minute='*/15', args=(trader,))
+    # 1小时
+    scheduler.add_job(get_data, trigger='cron', hour='*/1', args=(trader,))
+
+    # 15分
+    # scheduler.add_job(get_data, trigger='cron', minute='*/15', args=(trader,))
     scheduler.start()
 
     while True:
