@@ -1,31 +1,17 @@
 # -*- coding:utf-8 -*-
 """
-
-    币安推荐码:  返佣10%
-    https://www.binancezh.pro/cn/register?ref=AIR1GC70
-
-    币安合约推荐码: 返佣10%
-    https://www.binancezh.com/cn/futures/ref/51bitquant
-
-    if you don't have a binance account, you can use the invitation link to register one:
-    https://www.binancezh.com/cn/futures/ref/51bitquant
-
-    or use the inviation code: 51bitquant
-
-    网格交易: 适合币圈的高波动率的品种，适合现货， 如果交易合约，需要注意防止极端行情爆仓。
-
-
-    服务器购买地址: https://www.ucloud.cn/site/global.html?invitation_code=C1x2EA81CD79B8C#dongjing
 """
 from utils.config import config
 from utils.utility import get_file_path, load_json, save_json
 
 
+# 交易仓位
 class Positions:
 
     def __init__(self, file_name):
         self.file_name = file_name
         self.positions = {}
+        # 总利润
         self.total_profit = 0
         self.read_data()  # read the saved data
 
@@ -58,15 +44,20 @@ class Positions:
                    'profit_max_price': 0}
 
         if is_buy:
+            # 当前加仓次数.
             pos['current_increase_pos_count'] = pos['current_increase_pos_count'] + 1
-            pos['avg_price'] = (trade_amount * trade_price + pos['avg_price'] * pos['pos']) / (
-                    trade_amount + pos['pos'])
+            # 均价
+            pos['avg_price'] = (trade_amount * trade_price + pos['avg_price'] * pos['pos']) / (trade_amount + pos['pos'])
+            # 买的总数量
             pos['pos'] = trade_amount + pos['pos']
+            # 最后一次交易价格
             pos['last_entry_price'] = trade_price
 
         else:
-            self.total_profit += (trade_price - pos[
-                'avg_price']) * trade_amount - 2 * trade_amount * trade_price * config.trading_fee
+            # 2 * trade_amount * trade_price * config.trading_fee 表示算出来买/卖手续费
+            # config.trading_fee 交易手续费：每个帐号的等级不一样，手续费不一样
+            # 总利润
+            self.total_profit += (trade_price - pos['avg_price']) * trade_amount - 2 * trade_amount * trade_price * config.trading_fee
             pos['pos'] = pos['pos'] - trade_amount
 
         if pos['pos'] < min_qty:

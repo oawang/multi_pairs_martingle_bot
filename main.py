@@ -1,15 +1,4 @@
 """
-    币安推荐码:  返佣10%
-    https://www.binancezh.pro/cn/register?ref=AIR1GC70
-
-    币安合约推荐码: 返佣10%
-    https://www.binancezh.com/cn/futures/ref/51bitquant
-
-    if you don't have a binance account, you can use the invitation link to register one:
-    https://www.binancezh.com/cn/futures/ref/51bitquant
-
-    or use the inviation code: 51bitquant
-
     风险提示: 网格交易在单边行情的时候，会承受比较大的风险，请你了解整个代码的逻辑，然后再使用。
     RISK NOTE: Grid trading will endure great risk at trend market, please check the code before use it. USE AT YOUR OWN RISK.
 
@@ -36,7 +25,7 @@ from datetime import datetime
 
 pd.set_option('expand_frame_repr', False)
 
-from utils.config import signal_data
+from utils.config import signal_data, BUY_SIGNAL, SELL_SIGNAL, NONE_SIGNAL
 
 
 def get_data(trader: Union[BinanceFutureTrader, BinanceSpotTrader]):
@@ -55,7 +44,8 @@ def get_data(trader: Union[BinanceFutureTrader, BinanceSpotTrader]):
             if symbol.upper() in config.blocked_lists:
                 continue
 
-        klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.HOUR_1, limit=100)
+        # klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.HOUR_1, limit=100)
+        klines = trader.get_klines(symbol=symbol.upper(), interval=Interval.MINUTE_15, limit=50)
         if len(klines) > 0:
             df = pd.DataFrame(klines, dtype=np.float64,
                               columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'turnover', 'a2',
@@ -64,31 +54,37 @@ def get_data(trader: Union[BinanceFutureTrader, BinanceSpotTrader]):
             df.set_index('open_time', inplace=True)
             df.index = pd.to_datetime(df.index, unit='ms') + pd.Timedelta(hours=8)
 
-            df_4hour = df.resample(rule='4H').agg({'open': 'first',
-                                        'high': 'max',
-                                        'low': 'min',
-                                        'close': 'last',
-                                        'volume': 'sum',
-                                        'turnover': 'sum'
-                                        })
+            # df_4hour = df.resample(rule='4H').agg({'open': 'first',
+            #                             'high': 'max',
+            #                             'low': 'min',
+            #                             'close': 'last',
+            #                             'volume': 'sum',
+            #                             'turnover': 'sum'
+            #                             })
 
             # print(df)
 
             # calculate the pair's price change is one hour. you can modify the code below.
             pct = df['close'] / df['open'] - 1
-            pct_4h = df_4hour['close']/df_4hour['open'] - 1
+            # pct_4h = df_4hour['close']/df_4hour['open'] - 1
 
-            value = {'pct': pct[-1], 'pct_4h':pct_4h[-1] , 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
+            # value = {'pct': pct[-1], 'pct_4h':pct_4h[-1] , 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
 
+            value = {'pct': pct[-1], 'pct_4h': 0, 'symbol': symbol, 'hour_turnover': df['turnover'][-1]}
+
+            if value['pct'] < 0 and -value['pct'] >= config.pump_pct:
+            # the signal 1 mean buy signal.
+                value['signal'] = BUY_SIGNAL
 
             # calculate your signal here.
-            if value['pct'] >= config.pump_pct or value['pct_4h'] >= config.pump_pct_4h:
-                # the signal 1 mean buy signal.
-                value['signal'] = 1
-            elif value['pct'] <= -config.pump_pct or value['pct_4h'] <= -config.pump_pct_4h:
-                value['signal'] = -1
+            # if value['pct'] >= config.pump_pct or value['pct_4h'] >= config.pump_pct_4h:
+            #     # the signal 1 mean buy signal.
+            #     value['signal'] = BUY_SIGNAL
+            # elif value['pct'] <= -config.pump_pct or value['pct_4h'] <= -config.pump_pct_4h:
+            #     value['signal'] = SELL_SIGNAL
             else:
-                value['signal'] = 0
+                value['signal'] = NONE_SIGNAL
+                # value['signal'] = BUY_SIGNAL
 
             signals.append(value)
 
@@ -115,12 +111,16 @@ if __name__ == '__main__':
     get_data(trader)  # for testing
 
     scheduler = BackgroundScheduler()
-    scheduler.add_job(get_data, trigger='cron', hour='*/1', args=(trader,))
+    scheduler.add_job(get_data, trigger='cron', minute='*/15', args=(trader,))
     scheduler.start()
 
     while True:
-        time.sleep(10)
-        trader.start()
+        time.sleep(1)
+        try:
+            trader.start()
+        except Exception as e:
+            print(e)
+            logging.error(e.__str__())
 
 """
 策略逻辑: 

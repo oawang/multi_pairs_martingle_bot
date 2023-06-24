@@ -95,3 +95,9 @@ class Config:
 
 config = Config()
 signal_data = {'id': 0, 'signals': []}
+
+# 买入信号
+BUY_SIGNAL = 1
+# 买出信号
+SELL_SIGNAL = -1
+NONE_SIGNAL = 0

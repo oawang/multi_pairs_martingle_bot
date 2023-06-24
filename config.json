@@ -3,19 +3,22 @@
   "api_key": "",
   "api_secret": "",
   "max_pairs": 4,
-  "pump_pct": 0.026,
+  "pump_pct": 0.0065,
   "pump_pct_4h": 0.045,
-  "initial_trade_value": 200,
+  "initial_trade_value": 1000,
   "stop_loss_pct": 0,
-  "trade_value_multiplier": 1.5,
-  "increase_pos_when_drop_down": 0.05,
-  "exit_profit_pct": 0.01,
-  "profit_drawdown_pct": 0.01,
-  "trading_fee": 0.0004,
-  "max_increase_pos_count": 5,
-  "turnover_threshold": 100000,
+  "trade_value_multiplier": 1.3,
+  "increase_pos_when_drop_down": 0.013,
+  "exit_profit_pct": 0.008,
+  "profit_drawdown_pct": 0.008,
+  "trading_fee": 0.0008,
+  "max_increase_pos_count": 6,
+  "turnover_threshold": 10000,
   "blocked_lists": [],
-  "allowed_lists": [],
+  "allowed_lists": [
+    "DYDXUSDT"
+  ],
   "proxy_host": "",
-  "proxy_port": 0
+  "proxy_port": 0,
+  "taker_price_pct": 0.003
 }
